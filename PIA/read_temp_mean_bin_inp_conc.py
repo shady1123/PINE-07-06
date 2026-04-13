@@ -1,7 +1,45 @@
 import os
 import matplotlib.pyplot as plt
 import numpy as np
-def read_temp_mean_bin_inp_conc(OP_ID, MAIN_DIR, PINE_ID, CAMPAIGN):
+from matplotlib.ticker import LogLocator, LogFormatterMathtext
+
+
+def _read_temp_mean_table(txt_path):
+    """Locate the table header and read temp spectrum mean data."""
+    with open(txt_path, "r", encoding="latin1") as f:
+        lines = f.readlines()
+    header_idx = None
+    for i, line in enumerate(lines):
+        if line.strip().startswith("Temp_start\t"):
+            header_idx = i
+            break
+    if header_idx is None:
+        raise ValueError(f"Cannot find table header in {txt_path}")
+
+    # Use numpy for lightweight tab-separated loading
+    data = np.genfromtxt(
+        txt_path,
+        delimiter="\t",
+        names=True,
+        dtype=None,
+        encoding="utf-8",
+        skip_header=header_idx,
+    )
+    if data.size == 0:
+        raise ValueError("No valid temp spectrum data found.")
+    return data
+
+
+def read_temp_mean_bin_inp_conc(
+    OP_ID,
+    MAIN_DIR,
+    PINE_ID,
+    CAMPAIGN,
+    smooth_window=3,
+    show_std_band=True,
+    show_smooth_curve=True,
+    show_title=True,
+):
     # 拼接文件路径
     SAVEPATH = os.path.join(MAIN_DIR, 'Plots')
     PINE_DIR = os.path.join(MAIN_DIR, 'L2_Data', 'Temp_Spec')
@@ -12,86 +50,122 @@ def read_temp_mean_bin_inp_conc(OP_ID, MAIN_DIR, PINE_ID, CAMPAIGN):
     if not os.path.exists(txt_path):
         raise FileNotFoundError(f'文件不存在: {txt_path}')
 
-    # 配置项
-    target_columns = ['Temp_start', 'Temp_end', 'cn_ice', 'cn_ice_std']
-    HEADER_LINE_NUM = 15  # 表头在第15行
-    
     # 自动创建保存目录
     os.makedirs(SAVEPATH, exist_ok=True)
 
-    data = []
-    header = None
-    col_index_map = None
+    arr = _read_temp_mean_table(txt_path)
+    temp_start = np.asarray(arr["Temp_start"], dtype=float)
+    cn_ice = np.asarray(arr["cn_ice"], dtype=float)
+    cn_ice_std = np.asarray(arr["cn_ice_std"], dtype=float)
 
-    # 读取文件（兼容编码）
+    # 略去0值及无效值，避免对数坐标下拥挤/失真
+    valid = np.isfinite(temp_start) & np.isfinite(cn_ice) & np.isfinite(cn_ice_std) & (cn_ice > 0)
+    temp_start = temp_start[valid]
+    cn_ice = cn_ice[valid]
+    cn_ice_std = cn_ice_std[valid]
+    if temp_start.size == 0:
+        raise ValueError("No positive cn_ice values available after filtering.")
+
+    # 按温度排序，保证曲线连续
+    order = np.argsort(temp_start)
+    temp_start = temp_start[order]
+    cn_ice = cn_ice[order]
+    cn_ice_std = cn_ice_std[order]
+
+    # 平滑曲线（可配置窗口，窗口会被校正为>=1且不大于数据长度）
     try:
-        with open(txt_path, 'r', encoding='utf-8-sig') as f:
-            lines = f.readlines()
-    except UnicodeDecodeError:
-        with open(txt_path, 'r', encoding='gbk') as f:
-            lines = f.readlines()
+        smooth_window = int(smooth_window)
+    except (TypeError, ValueError):
+        smooth_window = 3
+    smooth_window = max(1, min(smooth_window, cn_ice.size))
+    # 优先使用奇数窗口，便于居中
+    if smooth_window > 1 and smooth_window % 2 == 0:
+        smooth_window -= 1
+    kernel = np.ones(smooth_window) / smooth_window
+    cn_ice_smooth = np.convolve(cn_ice, kernel, mode="same")
 
-    # 校验文件行数
-    if len(lines) < HEADER_LINE_NUM:
-        raise ValueError(f"文件行数不足！仅{len(lines)}行，表头需要在第{HEADER_LINE_NUM}行")
-    
-    print(f"成功读取文件: {txt_path}，总行数: {len(lines)},表头行数: {HEADER_LINE_NUM}")
+    plt.figure(figsize=(9, 5.5), dpi=160)
+    plt.plot(
+        temp_start,
+        cn_ice,
+        marker="o",
+        markersize=3.5,
+        linestyle="-",
+        color="#1f77b4",
+        linewidth=1.4,
+        alpha=0.9,
+        label="INP mean",
+    )
+    if show_smooth_curve and smooth_window > 1:
+        plt.plot(
+            temp_start,
+            cn_ice_smooth,
+            linestyle="-",
+            color="#d62728",
+            linewidth=1.6,
+            alpha=0.9,
+            label=f"{smooth_window}-point smoothed",
+        )
+    if show_std_band:
+        # 在log图中，std大于均值会导致下界接近0并“铺满整图”。
+        # 仅在相对不确定度合理（std <= 0.8*mean）的位置画误差带。
+        rel_ok = cn_ice_std <= (0.8 * cn_ice)
+        if np.any(rel_ok):
+            lower = np.maximum(cn_ice[rel_ok] - cn_ice_std[rel_ok], 1e-6)
+            upper = cn_ice[rel_ok] + cn_ice_std[rel_ok]
+            plt.fill_between(
+                temp_start[rel_ok],
+                lower,
+                upper,
+                color="#1f77b4",
+                alpha=0.15,
+                label=r"$\pm1\sigma$ (filtered)",
+            )
+        else:
+            print("Warning: std band skipped because std is too large relative to mean.")
 
-    # 解析数据
-    for line_num, line in enumerate(lines, 1):
-        line_stripped = line.strip()
-        if not line_stripped:
-            continue
-        
-        # 解析表头
-        if line_num == HEADER_LINE_NUM:
-            header = line_stripped.split()
-            missing_cols = [col for col in target_columns if col not in header]
-            if missing_cols:
-                raise ValueError(f"表头缺少目标列：{missing_cols}")
-            col_index_map = {col: idx for idx, col in enumerate(header)}
-            continue
-        
-        # 解析表头后的数据行
-        if line_num > HEADER_LINE_NUM and col_index_map:
-            values = line_stripped.split()
-            try:
-                row = [float(values[col_index_map[col]]) for col in target_columns]
-                data.append(row)
-            except (ValueError, IndexError, KeyError):
-                continue
-
-    # 校验有效数据
-    if not data:
-        raise ValueError('未读取到有效数据')
-
-    # 绘图并保存
-    temp_start = [row[0] for row in data]
-    cn_ice = [row[2] for row in data]
-    cn_ice_std = [row[3] for row in data]
-
-    # 数据平滑（可选，根据需要启用）
-    from scipy.ndimage import uniform_filter1d
-    cn_ice_smooth = uniform_filter1d(cn_ice, size=3)
-
-    # 温度
-    # 定义因子factor
-    factor = 3
-    plt.figure(figsize=(10, 6))
-    plt.plot(temp_start[factor:-factor], cn_ice[factor:-factor], marker='o', linestyle='-',  color='#1f77b4', linewidth=2)
-    plt.plot(temp_start[factor:-factor], cn_ice_smooth[factor:-factor], marker='', linestyle='-',  color='#ff7f0e', linewidth=2)
-    plt.xlabel('Temperature (°C)', fontsize=12)
-    plt.ylabel('INP Concentration (std L$^{-1}$)', fontsize=12)
-    plt.title(f'{PINE_ID} {CAMPAIGN} | OP {OP_ID}\nINP Concentration vs Temperature', fontsize=13)
-    plt.grid(True, alpha=0.3)
+    plt.xlabel("Temperature (°C)", fontsize=11)
+    plt.ylabel(r"INP concentration (std L$^{-1}$)", fontsize=11)
+    if show_title:
+        plt.title(f"{PINE_ID} {CAMPAIGN} | OP {OP_ID} | INP temperature spectrum", fontsize=12)
+    plt.yscale("log")
+    plt.grid(True, which="major", alpha=0.30, linestyle="-")
+    plt.grid(True, which="minor", alpha=0.15, linestyle=":")
+    plt.legend(frameon=False, fontsize=9, loc="best")
     plt.tight_layout()
-    # 横轴不留白，直接从数据范围开始
-    # plt.xlim(temp_start[-factor], temp_start[factor])
-    # 对数坐标
-    plt.yscale('log')
+
+    # x轴不留白：显式设置范围 + 去除自动margin
+    x_min = float(np.min(temp_start))
+    x_max = float(np.max(temp_start))
+    plt.xlim(x_min, x_max)
+    plt.margins(x=0)
+    # 确保最左侧和最右侧都有主刻度标签
+    step = 2.0
+    start_tick = np.ceil(x_min / step) * step
+    end_tick = np.floor(x_max / step) * step
+    x_ticks = np.arange(start_tick, end_tick + 0.5 * step, step)
+    # 强制包含左右边界；最后一个刻度默认用最大温度
+    x_ticks = np.unique(np.concatenate(([x_min], x_ticks, [x_max])))
+    x_ticks = np.round(x_ticks, 2)
+    plt.xticks(x_ticks)
+
+    # y轴范围按主数据自适应，避免误差带把跨度拉得过大
+    y_pos = cn_ice[np.isfinite(cn_ice) & (cn_ice > 0)]
+    if y_pos.size > 0:
+        y_low = np.nanmin(y_pos) * 0.7
+        y_high = np.nanmax(y_pos) * 1.3
+        if y_low <= 0:
+            y_low = np.nanmin(y_pos)
+        plt.ylim(y_low, y_high)
+    # 对数坐标使用标准log刻度，避免y轴刻度消失
+    ax = plt.gca()
+    ax.yaxis.set_major_locator(LogLocator(base=10.0, numticks=8))
+    ax.yaxis.set_minor_locator(LogLocator(base=10.0, subs=np.arange(2, 10) * 0.1, numticks=12))
+    ax.yaxis.set_major_formatter(LogFormatterMathtext(base=10.0))
+
     fig_path = os.path.join(SAVEPATH, f'{PINE_ID}_{CAMPAIGN}_op_id_{OP_ID}_inp_conc_vs_temp.png')
     plt.savefig(fig_path, dpi=150, bbox_inches='tight')
     plt.close()
     print(f'绘图已保存至: {fig_path}')
 
-    return data
+    return np.column_stack([temp_start, cn_ice, cn_ice_std]).tolist()

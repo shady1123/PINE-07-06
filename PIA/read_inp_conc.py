@@ -55,6 +55,9 @@ def read_input_conc(
     series_source="ice_run",
     cn_dt=3,
     downsample_n=1,
+    min_cn_ice=None,
+    resample_minutes=None,
+    show_title=True,
 ):
     """
     Plot INP time series from PIA outputs.
@@ -74,6 +77,11 @@ def read_input_conc(
     downsample_n : int
         Used when series_source="cn_bin". Keep every Nth point for plotting.
         1 means no downsampling.
+    min_cn_ice : float or None
+        Used when series_source="cn_bin". Filter out points with cn_ice <= min_cn_ice.
+    resample_minutes : int or None
+        Used when series_source="cn_bin". If set, aggregate cn_ice by time bins of N minutes
+        using median to improve readability.
     """
     SAVEPATH = os.path.join(MAIN_DIR, 'Plots')
     os.makedirs(SAVEPATH, exist_ok=True)
@@ -87,11 +95,32 @@ def read_input_conc(
         for c in ["INP_cn_0", "INP_count", "INP_cn_flush"]:
             if c in df.columns:
                 df[c] = pd.to_numeric(df[c], errors="coerce")
-        x = _to_datetime(df["datetime"].tolist())
+        df["datetime"] = _to_datetime(df["datetime"].tolist())
+        if min_cn_ice is not None:
+            df = df[df["INP_cn_0"] > float(min_cn_ice)]
+        if resample_minutes is not None:
+            if int(resample_minutes) < 1:
+                raise ValueError("resample_minutes must be >= 1")
+            df = (
+                df.set_index("datetime")[["INP_cn_0"]]
+                .resample(f"{int(resample_minutes)}min")
+                .median()
+                .dropna()
+                .reset_index()
+            )
+        if downsample_n is None or downsample_n < 1:
+            downsample_n = 1
+        if downsample_n > 1:
+            df = df.iloc[::downsample_n, :].reset_index(drop=True)
+        x = df["datetime"].tolist()
         y = df["INP_cn_0"].to_numpy()
         y_label = "INP_cn_0 (stdL-1)"
         file_tag = "runwise_ice"
-        print(f"Using run-wise data from: {ice_file}")
+        print(
+            f"Using run-wise data from: {ice_file}, "
+            + f"downsample_n={downsample_n}, min_cn_ice={min_cn_ice}, "
+            + f"resample_minutes={resample_minutes}"
+        )
     elif series_source == "cn_bin":
         cn_dir = os.path.join(MAIN_DIR, "L1_Data", "exportdata", "exportdata_cn", f"OP{OP_ID}")
         if not os.path.isdir(cn_dir):
@@ -125,6 +154,18 @@ def read_input_conc(
         if not df_list:
             raise ValueError("No valid cn data found for plotting.")
         df_all = pd.concat(df_list, ignore_index=True).dropna(subset=["date"]).sort_values("date")
+        if min_cn_ice is not None:
+            df_all = df_all[pd.to_numeric(df_all["cn_ice"], errors="coerce") > float(min_cn_ice)]
+        if resample_minutes is not None:
+            if int(resample_minutes) < 1:
+                raise ValueError("resample_minutes must be >= 1")
+            df_all = (
+                df_all.set_index("date")[["cn_ice"]]
+                .resample(f"{int(resample_minutes)}min")
+                .median()
+                .dropna()
+                .reset_index()
+            )
         if downsample_n is None or downsample_n < 1:
             downsample_n = 1
         if downsample_n > 1:
@@ -135,7 +176,8 @@ def read_input_conc(
         file_tag = f"timebin_cn_{cn_dt}sec"
         print(
             f"Using time-bin data from: {cn_dir} ({len(cn_files)} files), "
-            + f"downsample_n={downsample_n}"
+            + f"downsample_n={downsample_n}, min_cn_ice={min_cn_ice}, "
+            + f"resample_minutes={resample_minutes}"
         )
     else:
         raise ValueError("series_source must be 'ice_run' or 'cn_bin'")
@@ -147,10 +189,19 @@ def read_input_conc(
     plt.scatter(x, y, color="#1f77b4", alpha=0.6, s=20)
     plt.xlabel("Datetime")
     plt.ylabel(y_label)
-    if series_source == "cn_bin" and downsample_n > 1:
-        plt.title(f"INP Time Series ({series_source}, OP_ID: {OP_ID}, 1/{downsample_n} points)")
-    else:
-        plt.title(f"INP Time Series ({series_source}, OP_ID: {OP_ID})")
+    title = f"INP Time Series ({series_source}, OP_ID: {OP_ID})"
+    if series_source in ("cn_bin", "ice_run"):
+        extras = []
+        if downsample_n > 1:
+            extras.append(f"1/{downsample_n} points")
+        if min_cn_ice is not None:
+            extras.append(f"cn_ice>{min_cn_ice}")
+        if resample_minutes is not None:
+            extras.append(f"{resample_minutes}min median")
+        if extras:
+            title = f"{title[:-1]}, " + ", ".join(extras) + ")"
+    if show_title:
+        plt.title(title)
     plt.xticks(rotation=45)
     plt.grid(alpha=0.3)
     plt.tight_layout()
