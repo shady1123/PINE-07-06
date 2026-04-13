@@ -5,7 +5,7 @@ def read_temp_mean_bin_inp_conc(OP_ID, MAIN_DIR, PINE_ID, CAMPAIGN):
     # 拼接文件路径
     SAVEPATH = os.path.join(MAIN_DIR, 'Plots')
     PINE_DIR = os.path.join(MAIN_DIR, 'L2_Data', 'Temp_Spec')
-    txt_filename = f'{PINE_ID}_{CAMPAIGN}_op_id_{OP_ID}_temp.txt'
+    txt_filename = f'{PINE_ID}_{CAMPAIGN}_op_id_{OP_ID}_temp_mean.txt'
     txt_path = os.path.join(PINE_DIR, txt_filename)
     
     # 校验文件是否存在
@@ -14,7 +14,7 @@ def read_temp_mean_bin_inp_conc(OP_ID, MAIN_DIR, PINE_ID, CAMPAIGN):
 
     # 配置项
     target_columns = ['Temp_start', 'Temp_end', 'cn_ice', 'cn_ice_std']
-    HEADER_LINE_NUM = 18  # 表头在第18行
+    HEADER_LINE_NUM = 15  # 表头在第15行
     
     # 自动创建保存目录
     os.makedirs(SAVEPATH, exist_ok=True)

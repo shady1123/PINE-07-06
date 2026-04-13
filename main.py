@@ -1,6 +1,6 @@
 from PIA.process_pine_data import process_pine_data
 from PIA.read_inp_conc import read_input_conc
-from PIA.read_temp_bin_inp_conc import read_temp_bin_inp_conc
+from PIA.read_temp_mean_bin_inp_conc import read_temp_mean_bin_inp_conc
 if __name__ == "__main__":
     
     ############################################ 配置参数 ######### ###################################
@@ -16,6 +16,6 @@ if __name__ == "__main__":
 
     # 处理数据并获取结果
     result_file, _ = process_pine_data(FILE_COUNT, MAIN_DIR, EXCEL_TEMPLATE_PATH, PINE_ID, CAMPAIGN, SAVEPATH)
-    # data = read_input_conc(OP_ID, MAIN_DIR, PINE_ID, CAMPAIGN)
-    # temp_data = read_temp_bin_inp_conc(OP_ID, MAIN_DIR, PINE_ID, CAMPAIGN)
+    data = read_input_conc(OP_ID, MAIN_DIR, PINE_ID, CAMPAIGN)
+    temp_data = read_temp_mean_bin_inp_conc(OP_ID, MAIN_DIR, PINE_ID, CAMPAIGN)
    
