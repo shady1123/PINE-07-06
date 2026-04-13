@@ -1,0 +1,13 @@
+# 忽略 VS Code 的本地历史记录 (Local History)
+.history/
+
+# 忽略 Python 的编译缓存
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 忽略 VS Code 的系统设置 (可选，通常建议忽略)
+.vscode/
+
+# 忽略 Excel 的临时文件 (防止上传锁定的文件)
+~$*.xlsx
