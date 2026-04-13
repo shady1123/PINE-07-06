@@ -70,17 +70,23 @@ def read_temp_mean_bin_inp_conc(OP_ID, MAIN_DIR, PINE_ID, CAMPAIGN):
     cn_ice = [row[2] for row in data]
     cn_ice_std = [row[3] for row in data]
 
+    # 数据平滑（可选，根据需要启用）
+    from scipy.ndimage import uniform_filter1d
+    cn_ice_smooth = uniform_filter1d(cn_ice, size=3)
 
     # 温度
+    # 定义因子factor
+    factor = 3
     plt.figure(figsize=(10, 6))
-    plt.plot(temp_start, cn_ice, marker='o', linestyle='-',  color='#1f77b4',)
+    plt.plot(temp_start[factor:-factor], cn_ice[factor:-factor], marker='o', linestyle='-',  color='#1f77b4', linewidth=2)
+    plt.plot(temp_start[factor:-factor], cn_ice_smooth[factor:-factor], marker='', linestyle='-',  color='#ff7f0e', linewidth=2)
     plt.xlabel('Temperature (°C)', fontsize=12)
     plt.ylabel('INP Concentration (std L$^{-1}$)', fontsize=12)
     plt.title(f'{PINE_ID} {CAMPAIGN} | OP {OP_ID}\nINP Concentration vs Temperature', fontsize=13)
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
     # 横轴不留白，直接从数据范围开始
-    plt.xlim(temp_start[-1], temp_start[0])
+    # plt.xlim(temp_start[-factor], temp_start[factor])
     # 对数坐标
     plt.yscale('log')
     fig_path = os.path.join(SAVEPATH, f'{PINE_ID}_{CAMPAIGN}_op_id_{OP_ID}_inp_conc_vs_temp.png')
