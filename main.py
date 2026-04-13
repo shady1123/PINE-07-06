@@ -15,7 +15,37 @@ if __name__ == "__main__":
 
 
     # 处理数据并获取结果
-    result_file, _ = process_pine_data(FILE_COUNT, MAIN_DIR, EXCEL_TEMPLATE_PATH, PINE_ID, CAMPAIGN, SAVEPATH)
-    data = read_input_conc(OP_ID, MAIN_DIR, PINE_ID, CAMPAIGN)
-    temp_data = read_temp_mean_bin_inp_conc(OP_ID, MAIN_DIR, PINE_ID, CAMPAIGN)
+    # result_file, _ = process_pine_data(FILE_COUNT, MAIN_DIR, EXCEL_TEMPLATE_PATH, PINE_ID, CAMPAIGN, SAVEPATH)
+    # 1) run级（推荐做最终INPs时间序列）
+    # read_input_conc(OP_ID=1, MAIN_DIR=MAIN_DIR, PINE_ID=PINE_ID, CAMPAIGN=CAMPAIGN, series_source="ice_run")
+
+    # # 2) 秒级（3秒）
+    # read_input_conc(OP_ID=1, MAIN_DIR=MAIN_DIR, PINE_ID=PINE_ID, CAMPAIGN=CAMPAIGN, series_source="cn_bin", cn_dt=3)
+
+    # # 3) 秒级（1秒）
+    # read_input_conc(OP_ID=1, MAIN_DIR=MAIN_DIR, PINE_ID=PINE_ID, CAMPAIGN=CAMPAIGN, series_source="cn_bin", cn_dt=1)
+    
+    # 1秒数据太密，按10倍降采样
+    read_input_conc(
+        OP_ID=1,
+        MAIN_DIR=MAIN_DIR,
+        PINE_ID="PINE-07-06",
+        CAMPAIGN="20260410_test",
+        series_source="cn_bin",
+        cn_dt=1,
+        downsample_n=10
+    )
+
+    # 3秒数据，按5倍降采样
+    read_input_conc(
+        OP_ID=1,
+        MAIN_DIR=MAIN_DIR,
+        PINE_ID="PINE-07-06",
+        CAMPAIGN="20260410_test",
+        series_source="cn_bin",
+        cn_dt=3,
+        downsample_n=5
+    )
+
+    # temp_data = read_temp_mean_bin_inp_conc(OP_ID, MAIN_DIR, PINE_ID, CAMPAIGN)
    
