@@ -115,6 +115,7 @@ def cal_day_night_ave_inp_conc(
     ax.grid(axis="y", alpha=0.25, linestyle="--")
     ax.legend(frameon=False, fontsize=10)
     ax.set_yscale("log")
+    ax.set_ylim(1e-2, result_df[["day_mean", "night_mean"]].max().max() * 3) 
     plt.tight_layout()
 
     if OP_ID is None:

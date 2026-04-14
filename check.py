@@ -267,3 +267,7 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+    # python .\check.py --mode batch --op-dir "D:\Download\PINE-07-06\20260410_test\L1_Data\exportdata\exportdata_cn\OP1" --output-csv ".\inp_comparison_summary.csv"
+    # python .\check.py --mode batch --op-dir "D:\Download\PINE-07-06\20260410_test\L1_Data\exportdata\exportdata_cn\OP1" --only-dt 3 --output-csv ".\inp_comparison_summary_3sec.csv"
+    # python .\check.py --mode batch --op-dir "D:\Download\PINE-07-06\20260410_test\L1_Data\exportdata\exportdata_cn\OP1" --only-dt 1 --output-csv ".\inp_comparison_summary_1sec.csv"
