@@ -140,7 +140,7 @@ def read_temp_mean_bin_inp_conc(
     plt.xlim(x_min, x_max)
     plt.margins(x=0)
     # 确保最左侧和最右侧都有主刻度标签
-    step = 2.0
+    step = 2.5
     start_tick = np.ceil(x_min / step) * step
     end_tick = np.floor(x_max / step) * step
     x_ticks = np.arange(start_tick, end_tick + 0.5 * step, step)

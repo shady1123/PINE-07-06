@@ -15,14 +15,14 @@ if __name__ == "__main__":
     # CAMPAIGN = "20260410_test"  # 测试活动名称
 
     # 实验2、
-    # MAIN_DIR = r'D:\Download\Baidu Wangpan\2025.12.PINEs-Test\202512_06_Test'
-    # PINE_ID = "PINE-07-06"      # PINE编号
-    # CAMPAIGN = "test"  # 测试活动名称
+    MAIN_DIR = r'D:\Download\Baidu Wangpan\2025.12.PINEs-Test\202512_06_Test'
+    PINE_ID = "PINE-07-06"      # PINE编号
+    CAMPAIGN = "test"  # 测试活动名称
 
     # 实验3、
-    MAIN_DIR = r'D:\Download\Baidu Wangpan\2025.12.PINEs-Test\202512_Test'
-    PINE_ID = "PINE-07-04"      # PINE编号
-    CAMPAIGN = "202512_Test"  # 测试活动名称
+    # MAIN_DIR = r'D:\Download\Baidu Wangpan\2025.12.PINEs-Test\202512_Test'
+    # PINE_ID = "PINE-07-04"      # PINE编号
+    # CAMPAIGN = "202512_Test"  # 测试活动名称
 
     ############################################ 配置参数结束 ######### ###################################
     # 保存结果的目录
@@ -56,40 +56,43 @@ if __name__ == "__main__":
     # )
 
     # 3秒数据，按5倍降采样
-    # read_input_conc(
-    #     OP_ID=1,
-    #     MAIN_DIR=MAIN_DIR,
-    #     PINE_ID= PINE_ID,
-    #     CAMPAIGN= CAMPAIGN,
-    #     series_source="cn_bin",
-    #     cn_dt=3,
-    #     downsample_n=1,
-    #     min_cn_ice=10,       # 过滤底部密集低值带
-    #     resample_minutes=60  # 10分钟中位数
-    # )
+    read_input_conc(
+        OP_ID=22,
+        MAIN_DIR=MAIN_DIR,
+        PINE_ID= PINE_ID,
+        CAMPAIGN= CAMPAIGN,
+        series_source="cn_bin",
+        cn_dt=3,
+        downsample_n=1,
+        min_cn_ice=10,       # 过滤底部密集低值带
+        resample_minutes=60,  # 10分钟中位数
+        show_title=False 
+    )
 
-    # read_temp_mean_bin_inp_conc(
-    #     OP_ID, 
-    #     MAIN_DIR, 
-    #     PINE_ID, 
-    #     CAMPAIGN, 
-    #     smooth_window=5,   # 平滑窗口，单位为数据点数量，默认为3。会被校正为>=1且不大于数据长度。优先使用奇数窗口以便居中。
-    #     show_std_band=True, # 是否显示标准差带，默认为True
-    #     show_smooth_curve=False # 是否显示平滑曲线，默认为True
-    #     )
+    read_temp_mean_bin_inp_conc(
+        OP_ID=22,
+        MAIN_DIR=MAIN_DIR,
+        PINE_ID= PINE_ID,
+        CAMPAIGN= CAMPAIGN,
+        smooth_window=5,   # 平滑窗口，单位为数据点数量，默认为3。会被校正为>=1且不大于数据长度。优先使用奇数窗口以便居中。
+        show_std_band=True, # 是否显示标准差带，默认为True
+        show_smooth_curve=False, # 是否显示平滑曲线，默认为True
+        show_title=False, # 是否显示标题，默认为True
+        )
     
     # 读取温度分箱的INP浓度数据，进行分组并导出CSV文件
-    # read_temp_bin_inp_conc(
-    #     OP_ID=22,
-    #     MAIN_DIR=MAIN_DIR,
-    #     PINE_ID= PINE_ID,
-    #     CAMPAIGN= CAMPAIGN,
-    #     runs_per_big_run=12,    # 每个大run包含的runs数量，默认为10
-    #     unify_temp_range=True,  # 是否统一温度范围，默认为True
-    #     start_run_id=None,          # 起始run_id，默认为None表示不设限制
-    #     end_run_id=None,            # 结束run_id，默认为None表示不设限制
-    #     export_group_csv=True,  # 是否导出分组CSV文件，默认为True
-    # )
+    read_temp_bin_inp_conc(
+        OP_ID=22,
+        MAIN_DIR=MAIN_DIR,
+        PINE_ID= PINE_ID,
+        CAMPAIGN= CAMPAIGN,
+        runs_per_big_run=12,    # 每个大run包含的runs数量，默认为10
+        unify_temp_range=True,  # 是否统一温度范围，默认为True
+        start_run_id=None,          # 起始run_id，默认为None表示不设限制
+        end_run_id=None,            # 结束run_id，默认为None表示不设限制
+        export_group_csv=True,  # 是否导出分组CSV文件，默认为True
+        show_title=False, # 是否显示标题，默认为True
+    )
 
     # 计算每月平均INP浓度
     from PIA.cal_month_ave_inp_conc import cal_month_ave_inp_conc
